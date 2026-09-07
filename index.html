@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SGAI">
+<meta name="theme-color" content="#591620">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; background:#f4ede0; color:#000; }
+  .pantalla { min-height: 100vh; display: flex; flex-direction: column; }
+  .header { background:#591620; color:#fff; padding: 20px 16px; padding-top: max(20px, env(safe-area-inset-top)); text-align:center; }
+  .header h1 { font-size: 22px; color:#f4d35e; font-weight:800; }
+  .header p { font-size: 12px; color:#e8d9c8; margin-top:4px; }
+  .contenido { flex:1; padding: 24px 20px; }
+  .campo { margin-bottom: 16px; }
+  .campo label { display:block; font-size:13px; font-weight:600; color:#591620; margin-bottom:6px; }
+  .campo input { width:100%; padding:12px; border:1px solid #ddd; border-radius:10px; font-size:15px; background:#fff; }
+  .btn-primario { width:100%; background:#591620; color:#f4d35e; border:none; border-radius:12px; padding:16px; font-size:15px; font-weight:700; cursor:pointer; }
+  .btn-primario:disabled { opacity:0.6; }
+  .aviso { background:#fff3e0; border-radius:10px; padding:12px; font-size:12px; color:#8a6d1a; margin-bottom:16px; }
+  .aviso-error { background:#fde8e8; color:#a92727; }
+  .tarjeta-menu { background:#fff; border-radius:12px; padding:18px; margin-bottom:12px; border-left:4px solid #591620; }
+  .tarjeta-menu h3 { color:#591620; font-size:16px; margin-bottom:4px; }
+  .tarjeta-menu p { color:#888; font-size:13px; }
+  .centro { text-align:center; padding: 40px 20px; color:#888; }
+  .oculto { display:none; }
+</style>
+<title>SGAI Operativa</title>
+</head>
+<body>
+
+<div id="pantallaLogin" class="pantalla">
+  <div class="header">
+    <h1>SGAI</h1>
+    <p>Registro de Actividades — App Operativa (Web)</p>
+  </div>
+  <div class="contenido">
+    <div id="avisoDiagInicio" class="aviso oculto" style="background:#e3f2fd;color:#1565c0;"></div>
+    <div id="avisoSinConexionLogin" class="aviso oculto">Sin conexión — necesitas internet para iniciar sesión la primera vez.</div>
+    <div id="avisoErrorLogin" class="aviso aviso-error oculto"></div>
+    <div class="campo">
+      <label>Número de empleado</label>
+      <input type="text" id="inpNumEmpleado" inputmode="numeric" placeholder="Ej. 1234">
+    </div>
+    <div class="campo">
+      <label>PIN</label>
+      <input type="password" id="inpPin" inputmode="numeric" placeholder="••••">
+    </div>
+    <button class="btn-primario" id="btnIngresar">Ingresar</button>
+  </div>
+</div>
+
+<div id="pantallaHome" class="pantalla oculto">
+  <div class="header">
+    <h1 id="txtNombreServidor">SGAI</h1>
+    <p id="txtCargoServidor"></p>
+  </div>
+  <div class="contenido">
+    <div class="tarjeta-menu" id="btnMenuActividad" style="cursor:pointer;">
+      <h3>📋 Nueva actividad</h3>
+      <p>Registrar actividad del día</p>
+    </div>
+    <div class="tarjeta-menu" id="btnMenuDiagnostico" style="cursor:pointer;">
+      <h3>🗺️ Diagnóstico Comunitario</h3>
+      <p>Levantamiento comunitario</p>
+    </div>
+    <div class="tarjeta-menu" id="btnMenuTarjeta" style="cursor:pointer;">
+      <h3>📝 Tarjeta Informativa</h3>
+      <p>Reportar situación al Coordinador</p>
+    </div>
+    <div class="tarjeta-menu" id="btnMenuHistorial" style="cursor:pointer;">
+      <h3>📂 Mis Registros</h3>
+      <p>Ver historial de actividades</p>
+    </div>
+    <div class="centro" id="btnSincronizarAhora" style="cursor:pointer;color:#591620;font-weight:700;margin-bottom:16px;">🔄 Sincronizar ahora</div>
+    <div class="centro" id="cerrarSesionBtn" style="cursor:pointer;color:#a92727;">Cerrar sesión</div>
+  </div>
+</div>
+
+<div id="pantallaActividad" class="pantalla oculto">
+  <div class="header">
+    <span id="btnRegresarActividad" style="position:absolute;left:16px;top:20px;color:#f4d35e;cursor:pointer;">‹ Regresar</span>
+    <h1 style="font-size:17px;">Nueva Actividad</h1>
+  </div>
+  <div class="contenido">
+    <div id="avisoActividad" class="aviso aviso-error oculto"></div>
+
+    <div class="campo">
+      <label>Tipo de actividad *</label>
+      <select id="selTipoActividad"><option value="">Seleccionar...</option></select>
+    </div>
+    <div class="campo">
+      <label>Programa(s) relacionado(s)</label>
+      <select id="selProgramasActividad" multiple size="4"></select>
+      <p style="font-size:11px;color:#888;margin-top:4px;">Mantén presionado (o Ctrl/Cmd + clic) para elegir varios.</p>
+    </div>
+    <div class="campo">
+      <label>Descripción de la actividad *</label>
+      <textarea id="inpDescripcionActividad" rows="3" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;font-size:15px;"></textarea>
+    </div>
+
+    <div class="campo">
+      <label>¿Cómo se hizo esta actividad?</label>
+      <div style="display:flex;gap:8px;">
+        <button type="button" class="modo-btn activo" id="btnModoIndividual" style="flex:1;padding:10px;border-radius:8px;border:1px solid #591620;background:#591620;color:#fff;">👤 Individual</button>
+        <button type="button" class="modo-btn" id="btnModoGrupal" style="flex:1;padding:10px;border-radius:8px;border:1px solid #591620;background:#fff;color:#591620;">👥 En grupo</button>
+      </div>
+    </div>
+    <div id="bloqueParticipantes" class="oculto">
+      <label style="display:block;font-size:13px;font-weight:600;color:#591620;margin-bottom:6px;">¿Quién más participó contigo?</label>
+      <select id="selParticipantes" multiple size="4" style="width:100%;"></select>
+      <p style="font-size:11px;color:#888;margin-top:4px;font-style:italic;">Solo uno de ustedes debe registrar la actividad — los demás quedan cubiertos de asistencia por estar en esta lista.</p>
+    </div>
+
+    <div class="campo">
+      <label>Municipio *</label>
+      <select id="selMunicipioActividad"><option value="">Seleccionar...</option></select>
+    </div>
+    <div class="campo">
+      <label>Colonia / Localidad *</label>
+      <select id="selColoniaActividad"><option value="">Selecciona primero el municipio</option></select>
+    </div>
+    <div id="avisoGpsActividad" style="background:#fff3e0;border-radius:8px;padding:10px;font-size:12px;color:#8a6d1a;margin-bottom:16px;">📍 Obteniendo ubicación…</div>
+
+    <p style="font-weight:800;color:#591620;text-transform:uppercase;font-size:13px;border-bottom:1px solid #ddd;padding-bottom:6px;margin:16px 0 8px;">Personas atendidas</p>
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <div style="flex:1;"><label style="font-size:11px;color:#888;">Total</label><input type="number" id="inpPTotal" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;text-align:center;"></div>
+      <div style="flex:1;"><label style="font-size:11px;color:#888;">Mujeres</label><input type="number" id="inpPMujeres" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;text-align:center;"></div>
+      <div style="flex:1;"><label style="font-size:11px;color:#888;">Hombres</label><input type="number" id="inpPHombres" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;text-align:center;"></div>
+    </div>
+    <div id="detalleGrupos"></div>
+
+    <p style="font-weight:800;color:#591620;text-transform:uppercase;font-size:13px;border-bottom:1px solid #ddd;padding-bottom:6px;margin:16px 0 8px;">Evidencia (opcional, hasta 3)</p>
+    <div id="miniaturasEvidenciaActividad" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;"></div>
+    <input type="file" id="inpEvidenciaActividad" accept="image/*" capture="environment" style="display:none;">
+    <button type="button" id="btnAgregarEvidenciaActividad" style="width:100%;border:2px dashed #591620;border-radius:10px;padding:14px;background:#fff;color:#591620;font-weight:700;">📷 Tomar/elegir foto</button>
+
+    <button class="btn-primario" id="btnGuardarActividad" style="margin-top:24px;">📤 Guardar y generar</button>
+  </div>
+</div>
+
+<div id="pantallaDiagnostico" class="pantalla oculto">
+  <div class="header">
+    <span id="btnRegresarDiagnostico" style="position:absolute;left:16px;top:20px;color:#f4d35e;cursor:pointer;">‹ Regresar</span>
+    <h1 style="font-size:17px;">Diagnóstico Comunitario</h1>
+  </div>
+  <div class="contenido">
+    <div id="avisoDiagnostico" class="aviso aviso-error oculto"></div>
+
+    <p style="font-weight:800;color:#591620;text-transform:uppercase;font-size:13px;border-bottom:1px solid #ddd;padding-bottom:6px;margin-bottom:8px;">Lugar</p>
+    <div class="campo">
+      <label>Municipio *</label>
+      <select id="selMunicipioDiag"><option value="">Seleccionar...</option></select>
+    </div>
+    <div class="campo">
+      <label>Colonia / Localidad *</label>
+      <select id="selColoniaDiag"><option value="">Selecciona primero el municipio</option></select>
+    </div>
+
+    <p style="font-weight:800;color:#591620;text-transform:uppercase;font-size:13px;border-bottom:1px solid #ddd;padding-bottom:6px;margin:16px 0 8px;">Demografía</p>
+    <div style="display:flex;gap:8px;">
+      <div class="campo" style="flex:1;"><label>Población total *</label><input type="number" id="inpPoblacionTotal" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;"></div>
+      <div class="campo" style="flex:1;"><label>Núm. hogares</label><input type="number" id="inpNumHogares" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;"></div>
+    </div>
+    <div id="contadoresDiag"></div>
+
+    <p style="font-weight:800;color:#591620;text-transform:uppercase;font-size:13px;border-bottom:1px solid #ddd;padding-bottom:6px;margin:16px 0 8px;">Servicios</p>
+    <div id="serviciosDiag"></div>
+    <div class="campo">
+      <label>Otro servicio no listado</label>
+      <input type="text" id="inpOtroServicio" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;">
+    </div>
+
+    <p style="font-weight:800;color:#591620;text-transform:uppercase;font-size:13px;border-bottom:1px solid #ddd;padding-bottom:6px;margin:16px 0 8px;">Programas sociales presentes</p>
+    <div id="programasDiag"></div>
+    <div style="display:flex;gap:8px;align-items:flex-end;margin-top:8px;">
+      <div style="flex:1;"><label style="font-size:12px;">Otro programa</label><input type="text" id="inpOtroPrograma" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;"></div>
+      <select id="selNivelOtroPrograma" style="padding:10px;border:1px solid #ddd;border-radius:8px;">
+        <option>Municipal</option><option selected>Estatal</option><option>Federal</option>
+      </select>
+    </div>
+
+    <p style="font-weight:800;color:#591620;text-transform:uppercase;font-size:13px;border-bottom:1px solid #ddd;padding-bottom:6px;margin:16px 0 8px;">Liderazgos comunitarios</p>
+    <div id="listaLideres"></div>
+    <div style="display:flex;gap:6px;margin-bottom:10px;">
+      <input type="text" id="inpLiderNombre" placeholder="Nombre" style="flex:1;padding:10px;border:1px solid #ddd;border-radius:8px;">
+      <input type="text" id="inpLiderCargo" placeholder="Cargo" style="flex:1;padding:10px;border:1px solid #ddd;border-radius:8px;">
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:8px;">
+      <input type="text" id="inpLiderTelefono" placeholder="Teléfono (opcional)" style="flex:1;padding:10px;border:1px solid #ddd;border-radius:8px;">
+      <select id="selLiderAfinidad" style="flex:1;padding:10px;border:1px solid #ddd;border-radius:8px;">
+        <option value="">Afinidad...</option><option>Gobierno</option><option>Neutral</option><option>Organización</option>
+      </select>
+    </div>
+    <button type="button" id="btnAgregarLider" style="width:100%;border:2px dashed #2e7d32;border-radius:10px;padding:10px;background:#f1f9f1;color:#2e7d32;font-weight:700;margin-bottom:16px;">+ Agregar líder</button>
+
+    <p style="font-weight:800;color:#591620;text-transform:uppercase;font-size:13px;border-bottom:1px solid #ddd;padding-bottom:6px;margin-bottom:8px;">Contexto político-social</p>
+    <div class="campo"><label>Organizaciones sociales presentes</label><textarea id="inpOrganizaciones" rows="2" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;"></textarea></div>
+    <div class="campo"><label>Principales problemáticas *</label><textarea id="inpProblematicas" rows="3" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;"></textarea></div>
+    <div class="campo">
+      <label>¿Conflictos o tensiones activas?</label>
+      <div style="display:flex;gap:8px;">
+        <button type="button" class="conflicto-btn" data-val="si" style="flex:1;padding:10px;border-radius:8px;border:1px solid #ddd;background:#fff;">Sí</button>
+        <button type="button" class="conflicto-btn activo" data-val="no" style="flex:1;padding:10px;border-radius:8px;border:1px solid #ddd;background:#591620;color:#fff;">No</button>
+      </div>
+    </div>
+    <div class="campo"><label>Observaciones generales</label><textarea id="inpObservacionesDiag" rows="2" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;"></textarea></div>
+
+    <p style="font-weight:800;color:#591620;text-transform:uppercase;font-size:13px;border-bottom:1px solid #ddd;padding-bottom:6px;margin:16px 0 8px;">Evidencia (opcional, hasta 3)</p>
+    <div id="miniaturasEvidenciaDiag" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;"></div>
+    <input type="file" id="inpEvidenciaDiag" accept="image/*" capture="environment" style="display:none;">
+    <button type="button" id="btnAgregarEvidenciaDiag" style="width:100%;border:2px dashed #591620;border-radius:10px;padding:14px;background:#fff;color:#591620;font-weight:700;">📷 Tomar/elegir foto</button>
+
+    <button class="btn-primario" id="btnGuardarDiagnostico" style="margin-top:24px;">📤 Guardar y generar</button>
+  </div>
+</div>
+
+<div id="pantallaTarjeta" class="pantalla oculto">
+  <div class="header">
+    <span id="btnRegresarTarjeta" style="position:absolute;left:16px;top:20px;color:#f4d35e;cursor:pointer;">‹ Regresar</span>
+    <h1 style="font-size:17px;">Tarjeta Informativa</h1>
+  </div>
+  <div class="contenido">
+    <div id="avisoTarjeta" class="aviso aviso-error oculto"></div>
+    <div class="aviso" style="background:#fff6e0;color:#8a6d1a;">Dirigida al Coordinador Territorial. El folio se asigna al generar.</div>
+
+    <div class="campo"><label>Asunto *</label><input type="text" id="inpAsuntoTarjeta" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;"></div>
+    <div style="display:flex;gap:8px;">
+      <div class="campo" style="flex:1.4;"><label>Fecha del hecho *</label><input type="date" id="inpFechaTarjeta" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;"></div>
+      <div class="campo" style="flex:1;"><label>Hora</label><input type="time" id="inpHoraTarjeta" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;"></div>
+    </div>
+    <div class="campo"><label>Objetivo / Finalidad *</label><input type="text" id="inpObjetivoTarjeta" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;"></div>
+    <div class="campo">
+      <label>Municipio *</label>
+      <select id="selMunicipioTarjeta"><option value="">Seleccionar...</option></select>
+    </div>
+    <div class="campo">
+      <label>Colonia / Localidad *</label>
+      <select id="selColoniaTarjeta"><option value="">Selecciona primero el municipio</option></select>
+    </div>
+    <div class="campo"><label>Domicilio (opcional)</label><input type="text" id="inpDomicilioTarjeta" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;"></div>
+    <div class="campo"><label>Desarrollo de los hechos *</label><textarea id="inpDesarrolloTarjeta" rows="4" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;"></textarea></div>
+    <div class="campo"><label>Resultado *</label><textarea id="inpResultadoTarjeta" rows="3" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;"></textarea></div>
+
+    <p style="font-weight:800;color:#591620;text-transform:uppercase;font-size:13px;border-bottom:1px solid #ddd;padding-bottom:6px;margin:16px 0 8px;">Evidencias (opcional, hasta 5)</p>
+    <div id="miniaturasEvidenciaTarjeta" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;"></div>
+    <input type="file" id="inpEvidenciaTarjeta" accept="image/*" capture="environment" style="display:none;">
+    <button type="button" id="btnAgregarEvidenciaTarjeta" style="width:100%;border:2px dashed #591620;border-radius:10px;padding:14px;background:#fff;color:#591620;font-weight:700;">📷 Tomar/elegir foto</button>
+
+    <button class="btn-primario" id="btnGuardarTarjeta" style="margin-top:24px;">📤 Generar y guardar</button>
+  </div>
+</div>
+
+<div id="pantallaHistorial" class="pantalla oculto">
+  <div class="header">
+    <span id="btnRegresarHistorial" style="position:absolute;left:16px;top:20px;color:#f4d35e;cursor:pointer;">‹ Regresar</span>
+    <h1 style="font-size:17px;">Mis Registros</h1>
+  </div>
+  <div style="display:flex;background:#fff;padding:10px 8px;gap:6px;">
+    <button type="button" class="pestana-hist activa" data-tipo="actividad" style="flex:1;padding:8px;border-radius:999px;border:none;background:#591620;color:#f4d35e;font-size:11px;font-weight:700;">Actividades</button>
+    <button type="button" class="pestana-hist" data-tipo="diagnostico" style="flex:1;padding:8px;border-radius:999px;border:none;background:#f4ede0;color:#591620;font-size:11px;font-weight:700;">Diagnósticos</button>
+    <button type="button" class="pestana-hist" data-tipo="tarjeta" style="flex:1;padding:8px;border-radius:999px;border:none;background:#f4ede0;color:#591620;font-size:11px;font-weight:700;">Tarjetas</button>
+  </div>
+  <div class="contenido" id="listaHistorial" style="padding-top:14px;"></div>
+</div>
+
+<script>
+// ⚠️ IMPORTANTE: esta debe ser la URL real de tu SGAI, la misma
+// que usas para entrar al panel administrativo, terminada en
+// "/exec" — sin nada después. Confírmala antes de publicar.
+const BASE_URL = 'https://script.google.com/macros/s/AKfycbxkwk9FXi9Flw5Kg-mvG2mZ_REGunN5OIpMMzf5OtVm3Usvtn89-JVlhtdF_w054GJy/exec';
+
+// ═══════════════════════════════════════════════════
+// IndexedDB — equivalente web al SQLite de la app Android.
+// Un solo almacén por ahora ("config") para guardar la sesión;
+// los almacenes de registros_actividad, registros_diagnostico,
+// tarjetas_informativas, y catalogos se agregan en el siguiente
+// bloque, junto con esas pantallas.
+// ═══════════════════════════════════════════════════
+const DB_NOMBRE = 'sgai_operativa';
+const DB_VERSION = 2;
+
+function abrirDB() {
+  return new Promise((resolve, reject) => {
+    const peticion = indexedDB.open(DB_NOMBRE, DB_VERSION);
+    peticion.onupgradeneeded = (evento) => {
+      const db = evento.target.result;
+      if (!db.objectStoreNames.contains('config')) {
+        db.createObjectStore('config', { keyPath: 'clave' });
+      }
+      if (!db.objectStoreNames.contains('catalogos')) {
+        const almacenCat = db.createObjectStore('catalogos', { keyPath: 'id', autoIncrement: true });
+        almacenCat.createIndex('tipo', 'tipo', { unique: false });
+      }
+      if (!db.objectStoreNames.contains('registros_actividad')) {
+        const a = db.createObjectStore('registros_actividad', { keyPath: 'uuid' });
+        a.createIndex('sincronizado', 'sincronizado', { unique: false });
+      }
+      if (!db.objectStoreNames.contains('registros_diagnostico')) {
+        const d = db.createObjectStore('registros_diagnostico', { keyPath: 'uuid' });
+        d.createIndex('sincronizado', 'sincronizado', { unique: false });
+      }
+      if (!db.objectStoreNames.contains('tarjetas_informativas')) {
+        const t = db.createObjectStore('tarjetas_informativas', { keyPath: 'uuid' });
+        t.createIndex('sincronizado', 'sincronizado', { unique: false });
+      }
+    };
+    peticion.onsuccess = (evento) => resolve(evento.target.result);
+    peticion.onerror = (evento) => reject(evento.target.error);
+  });
+}
+
+// ── Funciones genéricas de almacén (sirven para los tres tipos de registro) ──
+function generarUuid() {
+  return 'w-' + Date.now() + '-' + Math.random().toString(36).substring(2, 10);
+}
+
+async function guardarEnAlmacen(nombreAlmacen, registro) {
+  const db = await abrirDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(nombreAlmacen, 'readwrite');
+    tx.objectStore(nombreAlmacen).put(registro);
+    tx.oncomplete = () => resolve(registro.uuid);
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function obtenerDeAlmacen(nombreAlmacen, uuid) {
+  const db = await abrirDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(nombreAlmacen, 'readonly');
+    const peticion = tx.objectStore(nombreAlmacen).get(uuid);
+    peticion.onsuccess = () => resolve(peticion.result || null);
+    peticion.onerror = () => reject(peticion.error);
+  });
+}
+
+async function obtenerTodoDeAlmacen(nombreAlmacen) {
+  const db = await abrirDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(nombreAlmacen, 'readonly');
+    const peticion = tx.objectStore(nombreAlmacen).getAll();
+    peticion.onsuccess = () => resolve(peticion.result || []);
+    peticion.onerror = () => reject(peticion.error);
+  });
+}
+
+async function obtenerPendientesDeAlmacen(nombreAlmacen) {
+  const todos = await obtenerTodoDeAlmacen(nombreAlmacen);
+  return todos.filter(r => !r.sincronizado && (r.intentos || 0) < 5);
+}
+
+// ── Catálogos ──
+async function guardarCatalogos(catalogos) {
+  const db = await abrirDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('catalogos', 'readwrite');
+    const almacen = tx.objectStore('catalogos');
+    almacen.clear();
+    (catalogos.municipios || []).forEach(m => almacen.add({ tipo: 'municipio', valor: m }));
+    (catalogos.colonias || []).forEach(c => almacen.add({ tipo: 'colonia', municipio: c.municipio, valor: c.colonia }));
+    (catalogos.programas || []).forEach(p => almacen.add({ tipo: 'programa', valor: p }));
+    (catalogos.tiposAccion || []).forEach(t => almacen.add({ tipo: 'tipo_accion', valor: t }));
+    (catalogos.servidores || []).forEach(s => almacen.add({ tipo: 'servidor', idServidor: s.id, valor: s.nombre }));
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function obtenerCatalogoPorTipo(tipo, municipioFiltro) {
+  const todos = await obtenerTodoDeAlmacen('catalogos');
+  return todos.filter(c => c.tipo === tipo && (!municipioFiltro || c.municipio === municipioFiltro))
+    .map(c => tipo === 'colonia' ? c.valor : (tipo === 'servidor' ? { id: c.idServidor, nombre: c.valor } : c.valor));
+}
+
+
+async function guardarConfig(clave, valor) {
+  const db = await abrirDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('config', 'readwrite');
+    tx.objectStore('config').put({ clave, valor });
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function leerConfig(clave) {
+  const db = await abrirDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('config', 'readonly');
+    const peticion = tx.objectStore('config').get(clave);
+    peticion.onsuccess = () => resolve(peticion.result ? peticion.result.valor : null);
+    peticion.onerror = () => reject(peticion.error);
+  });
+}
+
+// ═══════════════════════════════════════════════════
+// Comunicación con SGAI — mismo backend que ya usa la app Android,
+// sin ningún cambio. Como esta página vive en el mismo dominio,
+// no hace falta configurar ninguna URL.
+// ═══════════════════════════════════════════════════
+async function llamarSGAI(cuerpo) {
+  const resp = await fetch(BASE_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // evita preflight CORS en Apps Script
+    body: JSON.stringify(cuerpo)
+  });
+  return await resp.json();
+}
+
+function hayConexion() {
+  return navigator.onLine;
+}
+
+// ── Evidencia: en la web, las fotos se manejan como Blob directo
+// en IndexedDB (no hace falta un sistema de archivos aparte, a
+// diferencia de la app de Android). Se convierten a base64 solo
+// al momento de sincronizar con SGAI.
+function blobABase64(blob) {
+  return new Promise((resolve, reject) => {
+    const lector = new FileReader();
+    lector.onloadend = () => resolve(lector.result); // ya viene como "data:<mime>;base64,...."
+    lector.onerror = reject;
+    lector.readAsDataURL(blob);
+  });
+}
+
+async function prepararEvidenciaParaEnvio(items) {
+  const preparadas = [];
+  for (const item of (items || [])) {
+    try {
+      const base64 = await blobABase64(item.blob);
+      preparadas.push({ base64, nombre: item.nombre || 'evidencia.jpg' });
+    } catch (e) { /* esa evidencia en particular se omite, sin interrumpir el resto */ }
+  }
+  return preparadas;
+}
+
+// ── Cola de sincronización compartida — evita que dos
+// sincronizaciones corran al mismo tiempo (mismo problema que
+// corregimos en la app de Android: el temporizador automático y
+// un envío manual podían duplicar un mismo registro). ──
+let colaSincronizacion = Promise.resolve();
+function conLockSincronizacion(fn) {
+  const resultado = colaSincronizacion.then(fn, fn);
+  colaSincronizacion = resultado.catch(() => {});
+  return resultado;
+}
+
+async function sincronizarActividadInmediata(reg, token) {
+  return conLockSincronizacion(async () => {
+    try {
+      const evidencia = await prepararEvidenciaParaEnvio(reg.evidencia);
+      const data = await llamarSGAI({
+        accion: 'guardarRegistroApp', token, uuidApp: reg.uuid,
+        fecha: reg.fecha, tipoActividad: reg.tipoActividad, programas: reg.programas,
+        descripcion: reg.descripcion, municipio: reg.municipio, colonia: reg.colonia,
+        personasAtendidas: reg.personasAtendidas, otrosParticipantes: reg.otrosParticipantes || [],
+        gpsLat: reg.gpsLat, gpsLng: reg.gpsLng, evidencia
+      });
+      if (data.exito) {
+        reg.sincronizado = true; reg.folio = data.folio;
+        await guardarEnAlmacen('registros_actividad', reg);
+        return { ok: true, folio: data.folio };
+      } else {
+        reg.intentos = (reg.intentos || 0) + 1; reg.errorMsg = data.error;
+        await guardarEnAlmacen('registros_actividad', reg);
+        return { ok: false, mensaje: data.error };
+      }
+    } catch (e) {
+      reg.intentos = (reg.intentos || 0) + 1; reg.errorMsg = e.message;
+      await guardarEnAlmacen('registros_actividad', reg);
+      return { ok: false, mensaje: e.message };
+    }
+  });
+}
+
+async function sincronizarDiagnosticoInmediata(reg, token) {
+  return conLockSincronizacion(async () => {
+    try {
+      const evidencia = await prepararEvidenciaParaEnvio(reg.evidencia);
+      const data = await llamarSGAI({
+        accion: 'guardarDiagnosticoApp', token, uuidApp: reg.uuid,
+        fecha: reg.fecha, municipio: reg.municipio, colonia: reg.colonia,
+        poblacionTotal: reg.poblacionTotal, numHogares: reg.numHogares,
+        mujeres: reg.mujeres, hombres: reg.hombres,
+        ninasNinos0a12: reg.ninasNinos0a12, adolescentes13a17: reg.adolescentes13a17,
+        jovenes18a29: reg.jovenes18a29, adultos30a64: reg.adultos30a64, adultosMayores65: reg.adultosMayores65,
+        servicios: reg.servicios, programas: reg.programas, lideres: reg.lideres,
+        organizacionesSociales: reg.organizacionesSociales, problematicas: reg.problematicas,
+        conflictosActivos: reg.conflictosActivos, observaciones: reg.observaciones, evidencia
+      });
+      if (data.exito) {
+        reg.sincronizado = true; reg.folio = data.folio;
+        await guardarEnAlmacen('registros_diagnostico', reg);
+        return { ok: true, folio: data.folio };
+      } else {
+        reg.intentos = (reg.intentos || 0) + 1; reg.errorMsg = data.error;
+        await guardarEnAlmacen('registros_diagnostico', reg);
+        return { ok: false, mensaje: data.error };
+      }
+    } catch (e) {
+      reg.intentos = (reg.intentos || 0) + 1; reg.errorMsg = e.message;
+      await guardarEnAlmacen('registros_diagnostico', reg);
+      return { ok: false, mensaje: e.message };
+    }
+  });
+}
+
+async function sincronizarTarjetaInmediata(reg, token) {
+  return conLockSincronizacion(async () => {
+    try {
+      const evidencia = await prepararEvidenciaParaEnvio(reg.evidencia);
+      const data = await llamarSGAI({
+        accion: 'guardarTarjetaApp', token, uuidApp: reg.uuid,
+        asunto: reg.asunto, fecha: reg.fecha, hora: reg.hora, objetivo: reg.objetivo,
+        municipio: reg.municipio, colonia: reg.colonia, domicilio: reg.domicilio,
+        desarrolloHechos: reg.desarrolloHechos, resultado: reg.resultado, evidencias: evidencia
+      });
+      if (data.exito) {
+        reg.sincronizado = true; reg.folio = data.folio;
+        await guardarEnAlmacen('tarjetas_informativas', reg);
+        return { ok: true, folio: data.folio };
+      } else {
+        reg.intentos = (reg.intentos || 0) + 1; reg.errorMsg = data.error;
+        await guardarEnAlmacen('tarjetas_informativas', reg);
+        return { ok: false, mensaje: data.error };
+      }
+    } catch (e) {
+      reg.intentos = (reg.intentos || 0) + 1; reg.errorMsg = e.message;
+      await guardarEnAlmacen('tarjetas_informativas', reg);
+      return { ok: false, mensaje: e.message };
+    }
+  });
+}
+
+async function sincronizarTodoPendiente() {
+  return conLockSincronizacion(async () => {
+    if (!hayConexion()) return { ok: false, razon: 'sin_red' };
+    const servidor = await leerConfig('servidor');
+    if (!servidor || !servidor.token) return { ok: false, razon: 'sin_sesion' };
+
+    let actividades = 0, diagnosticos = 0, tarjetas = 0;
+    for (const reg of await obtenerPendientesDeAlmacen('registros_actividad')) {
+      const r = await sincronizarActividadInmediata(reg, servidor.token);
+      if (r.ok) actividades++;
+    }
+    for (const reg of await obtenerPendientesDeAlmacen('registros_diagnostico')) {
+      const r = await sincronizarDiagnosticoInmediata(reg, servidor.token);
+      if (r.ok) diagnosticos++;
+    }
+    for (const reg of await obtenerPendientesDeAlmacen('tarjetas_informativas')) {
+      const r = await sincronizarTarjetaInmediata(reg, servidor.token);
+      if (r.ok) tarjetas++;
+    }
+    return { ok: true, actividades, diagnosticos, tarjetas };
+  });
+}
+
+async function descargarCatalogos(token) {
+  if (!hayConexion()) return { ok: false, mensaje: 'Se necesita internet para descargar catálogos.' };
+  try {
+    const data = await llamarSGAI({ accion: 'obtenerCatalogosApp', token });
+    if (!data.exito) return { ok: false, mensaje: data.error };
+    await guardarCatalogos(data);
+    if (data.institucional) await guardarConfig('institucional', data.institucional);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, mensaje: e.message };
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// Solicita al navegador que NO borre el almacenamiento de esta
+// app bajo presión de espacio — sin esto, iOS puede tratar los
+// datos guardados como "descartables" en cualquier momento.
+// ═══════════════════════════════════════════════════
+if (navigator.storage && navigator.storage.persist) {
+  navigator.storage.persist().then(concedido => {
+    console.log('Almacenamiento persistente:', concedido ? 'concedido' : 'NO concedido');
+  });
+}
+
+// ═══════════════════════════════════════════════════
+// Registro del Service Worker — lo que permite que la app abra
+// aunque no haya internet, una vez que ya se instaló.
+// ═══════════════════════════════════════════════════
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(err => {
+    console.log('No se pudo registrar el service worker:', err);
+  });
+}
+
+// ═══════════════════════════════════════════════════
+// Pantalla: Login
+// ═══════════════════════════════════════════════════
+function mostrarPantalla(id) {
+  document.querySelectorAll('.pantalla').forEach(p => p.classList.add('oculto'));
+  document.getElementById(id).classList.remove('oculto');
+}
+
+// ═══════════════════════════════════════════════════
+// Identificador de este navegador/instalación — la web no tiene
+// un "ID de dispositivo" como el celular, así que generamos uno
+// la primera vez y lo reutilizamos siempre después.
+// ═══════════════════════════════════════════════════
+async function obtenerDispositivoId() {
+  let id = await leerConfig('dispositivoId');
+  if (!id) {
+    id = 'web-' + Date.now() + '-' + Math.random().toString(36).substring(2, 10);
+    await guardarConfig('dispositivoId', id);
+  }
+  return id;
+}
+
+document.getElementById('btnIngresar').addEventListener('click', async () => {
+  const numEmpleado = document.getElementById('inpNumEmpleado').value.trim();
+  const pin = document.getElementById('inpPin').value.trim();
+  const avisoError = document.getElementById('avisoErrorLogin');
+  const avisoSinConexion = document.getElementById('avisoSinConexionLogin');
+  avisoError.classList.add('oculto');
+  avisoSinConexion.classList.add('oculto');
+
+  if (!numEmpleado || !pin) {
+    avisoError.textContent = 'Captura tu número de empleado y PIN.';
+    avisoError.classList.remove('oculto');
+    return;
+  }
+  if (!hayConexion()) {
+    avisoSinConexion.classList.remove('oculto');
+    return;
+  }
+
+  const boton = document.getElementById('btnIngresar');
+  boton.disabled = true;
+  boton.textContent = 'Ingresando…';
+
+  try {
+    const dispositivoId = await obtenerDispositivoId();
+    const data = await llamarSGAI({ accion: 'loginServidor', numEmpleado, pin, dispositivoId });
+    if (data.exito) {
+      await guardarConfig('servidor', {
+        token: data.token, nombre: data.nombre, cargo: data.cargo, personalId: data.personalId
+      });
+      const resultadoCat = await descargarCatalogos(data.token);
+      if (!resultadoCat.ok) console.log('No se pudieron descargar catálogos:', resultadoCat.mensaje);
+      iniciarSincronizacionAutomatica();
+      mostrarHome(data.nombre, data.cargo);
+    } else {
+      avisoError.textContent = data.error || 'No se pudo iniciar sesión.';
+      avisoError.classList.remove('oculto');
+    }
+  } catch (e) {
+    avisoError.textContent = 'Error de conexión: ' + e.message;
+    avisoError.classList.remove('oculto');
+  }
+  boton.disabled = false;
+  boton.textContent = 'Ingresar';
+});
+
+function mostrarHome(nombre, cargo) {
+  document.getElementById('txtNombreServidor').textContent = nombre;
+  document.getElementById('txtCargoServidor').textContent = cargo || '';
+  mostrarPantalla('pantallaHome');
+}
+
+let intervaloSincronizacion = null;
+function iniciarSincronizacionAutomatica() {
+  if (intervaloSincronizacion) return; // ya estaba activo, no duplicar
+  intervaloSincronizacion = setInterval(async () => {
+    if (hayConexion()) await sincronizarTodoPendiente();
+  }, 30000);
+}
+
+document.getElementById('cerrarSesionBtn').addEventListener('click', async () => {
+  await guardarConfig('servidor', null);
+  mostrarPantalla('pantallaLogin');
+});
+
+// ═══════════════════════════════════════════════════
+// Pantalla: Nueva Actividad
+// ═══════════════════════════════════════════════════
+const CAMPOS_PERSONAS = [
+  { clave: 'ninasNinos', etiqueta: '🧒 Niñas y niños (0-12)' },
+  { clave: 'adolescentes', etiqueta: '🧑 Adolescentes (13-17)' },
+  { clave: 'jovenes', etiqueta: '🧑‍🎓 Jóvenes (18-29)' },
+  { clave: 'adultos', etiqueta: '🧑‍💼 Adultos (30-64)' },
+  { clave: 'adultosMayores', etiqueta: '🧓 Adultos mayores (65+)' },
+  { clave: 'indigenas', etiqueta: '🌾 Personas indígenas' },
+  { clave: 'discapacidad', etiqueta: '♿ Personas con discapacidad' },
+  { clave: 'lgbttti', etiqueta: '🏳️‍🌈 Comunidad LGBTTTIQ+' },
+  { clave: 'afromexicanas', etiqueta: '✊🏾 Personas afromexicanas' },
+  { clave: 'jefasFamilia', etiqueta: '👩‍👧 Jefas de familia' },
+];
+
+// ═══════════════════════════════════════════════════
+// Pantalla: Diagnóstico Comunitario
+// ═══════════════════════════════════════════════════
+const CONTADORES_DIAG = [
+  { clave: 'mujeres', etiqueta: '♀️ Mujeres' },
+  { clave: 'hombres', etiqueta: '♂️ Hombres' },
+  { clave: 'ninasNinos0a12', etiqueta: '🧒 Niñas y niños (0-12)' },
+  { clave: 'adolescentes13a17', etiqueta: '🧑 Adolescentes (13-17)' },
+  { clave: 'jovenes18a29', etiqueta: '🧑‍🎓 Jóvenes (18-29)' },
+  { clave: 'adultos30a64', etiqueta: '🧑‍💼 Adultos (30-64)' },
+  { clave: 'adultosMayores65', etiqueta: '🧓 Adultos mayores (65+)' },
+];
+const SERVICIOS_CON_PARCIAL = [
+  { clave: 'aguaPotable', etiqueta: '🚰 Agua potable' },
+  { clave: 'electricidad', etiqueta: '💡 Electricidad' },
+  { clave: 'drenaje', etiqueta: '🚿 Drenaje/Alcantarillado' },
+  { clave: 'callesPavimentadas', etiqueta: '🛣️ Calles pavimentadas' },
+  { clave: 'internet', etiqueta: '📶 Internet/Conectividad' },
+  { clave: 'transportePublico', etiqueta: '🚌 Transporte público' },
+];
+const SERVICIOS_SI_NO = [
+  { clave: 'centroSalud', etiqueta: '🏥 Centro de salud' },
+  { clave: 'escuela', etiqueta: '🏫 Escuela' },
+];
+const PROGRAMAS_FIJOS_DIAG = ['BIENESTAR Y DESARROLLO', 'GUARDIANAS DE VIDA', 'MADRES TRABAJADORAS', 'TRANSFORMANDO CON LA JUVENTUD', 'TU EXPERIENCIA TRANSFORMA', 'PERSONAS CUIDADORAS'];
+
+let evidenciaDiag = [];
+let lideresDiag = [];
+let programasSelDiag = new Set();
+let serviciosDiag = {};
+let conflictosActivosDiag = false;
+let gpsActual = null;
+let evidenciaActividad = []; // [{ blob, nombre }]
+
+document.getElementById('btnMenuDiagnostico').addEventListener('click', async () => {
+  await prepararPantallaDiagnostico();
+  mostrarPantalla('pantallaDiagnostico');
+});
+document.getElementById('btnRegresarDiagnostico').addEventListener('click', () => mostrarPantalla('pantallaHome'));
+
+async function prepararPantallaDiagnostico() {
+  const municipios = await obtenerCatalogoPorTipo('municipio');
+  document.getElementById('selMunicipioDiag').innerHTML = '<option value="">Seleccionar...</option>' + municipios.map(m => `<option value="${m}">${m}</option>`).join('');
+
+  document.getElementById('contadoresDiag').innerHTML = CONTADORES_DIAG.map(c => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0ebe0;">
+      <span style="font-size:13px;">${c.etiqueta}</span>
+      <input type="number" id="cd_${c.clave}" value="0" style="width:60px;padding:6px;border:1px solid #ddd;border-radius:8px;text-align:center;">
+    </div>`).join('');
+
+  serviciosDiag = {};
+  function filaServicio(c, opciones) {
+    return `<div style="padding:8px 0;border-bottom:1px solid #f0ebe0;">
+      <p style="font-size:13px;font-weight:600;margin-bottom:6px;">${c.etiqueta}</p>
+      <div style="display:flex;gap:6px;">
+        ${opciones.map(op => `<button type="button" class="srv-btn" data-clave="${c.clave}" data-val="${op}" style="flex:1;padding:8px;border-radius:8px;border:1px solid #ddd;background:#fff;font-size:12px;">${op}</button>`).join('')}
+      </div>
+    </div>`;
+  }
+  document.getElementById('serviciosDiag').innerHTML =
+    SERVICIOS_CON_PARCIAL.map(c => filaServicio(c, ['Sí', 'No', 'Parcial'])).join('') +
+    SERVICIOS_SI_NO.map(c => filaServicio(c, ['Sí', 'No'])).join('');
+  document.querySelectorAll('.srv-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const clave = btn.getAttribute('data-clave'), val = btn.getAttribute('data-val');
+      serviciosDiag[clave] = serviciosDiag[clave] === val ? '' : val;
+      document.querySelectorAll(`.srv-btn[data-clave="${clave}"]`).forEach(b => {
+        const activo = serviciosDiag[clave] === b.getAttribute('data-val');
+        b.style.background = activo ? '#591620' : '#fff';
+        b.style.color = activo ? '#fff' : '#000';
+      });
+    });
+  });
+
+  programasSelDiag = new Set();
+  document.getElementById('programasDiag').innerHTML = PROGRAMAS_FIJOS_DIAG.map(p => `
+    <div class="prog-item" data-prog="${p}" style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f0ebe0;cursor:pointer;">
+      <span class="prog-check">☐</span><span style="font-size:13px;">${p}</span>
+    </div>`).join('');
+  document.querySelectorAll('.prog-item').forEach(el => {
+    el.addEventListener('click', () => {
+      const p = el.getAttribute('data-prog');
+      if (programasSelDiag.has(p)) { programasSelDiag.delete(p); el.querySelector('.prog-check').textContent = '☐'; }
+      else { programasSelDiag.add(p); el.querySelector('.prog-check').textContent = '☑'; }
+    });
+  });
+
+  lideresDiag = [];
+  renderLideres();
+  evidenciaDiag = [];
+  renderMiniaturasEvidencia('miniaturasEvidenciaDiag', evidenciaDiag);
+  conflictosActivosDiag = false;
+  document.querySelectorAll('.conflicto-btn').forEach(b => {
+    b.style.background = b.getAttribute('data-val') === 'no' ? '#591620' : '#fff';
+    b.style.color = b.getAttribute('data-val') === 'no' ? '#fff' : '#000';
+  });
+
+  ['inpPoblacionTotal', 'inpNumHogares', 'inpOtroServicio', 'inpOtroPrograma', 'inpOrganizaciones', 'inpProblematicas', 'inpObservacionesDiag'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('avisoDiagnostico').classList.add('oculto');
+}
+
+document.getElementById('selMunicipioDiag').addEventListener('change', async (e) => {
+  const colonias = await obtenerCatalogoPorTipo('colonia', e.target.value);
+  const sel = document.getElementById('selColoniaDiag');
+  sel.innerHTML = colonias.length
+    ? '<option value="">Seleccionar...</option>' + colonias.map(c => `<option value="${c}">${c}</option>`).join('')
+    : '<option value="">Sin colonias registradas</option>';
+});
+
+document.querySelectorAll('.conflicto-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    conflictosActivosDiag = btn.getAttribute('data-val') === 'si';
+    document.querySelectorAll('.conflicto-btn').forEach(b => {
+      const activo = (b.getAttribute('data-val') === 'si') === conflictosActivosDiag;
+      b.style.background = activo ? '#591620' : '#fff';
+      b.style.color = activo ? '#fff' : '#000';
+    });
+  });
+});
+
+function renderLideres() {
+  document.getElementById('listaLideres').innerHTML = lideresDiag.map((l, i) => `
+    <div style="display:flex;justify-content:space-between;align-items:center;background:#fff;border-radius:10px;padding:10px;margin-bottom:8px;">
+      <div><strong style="font-size:13px;">${l.nombre}</strong><br><span style="font-size:11px;color:#888;">${[l.cargo, l.afinidad].filter(Boolean).join(' — ')}</span></div>
+      <span data-idx="${i}" class="btnQuitarLider" style="color:#a92727;font-weight:700;cursor:pointer;">✕</span>
+    </div>`).join('');
+  document.querySelectorAll('.btnQuitarLider').forEach(el => {
+    el.addEventListener('click', () => { lideresDiag.splice(Number(el.getAttribute('data-idx')), 1); renderLideres(); });
+  });
+}
+document.getElementById('btnAgregarLider').addEventListener('click', () => {
+  const nombre = document.getElementById('inpLiderNombre').value.trim();
+  if (!nombre) { alert('Escribe al menos el nombre del líder.'); return; }
+  lideresDiag.push({
+    nombre, cargo: document.getElementById('inpLiderCargo').value.trim(),
+    telefono: document.getElementById('inpLiderTelefono').value.trim(),
+    afinidad: document.getElementById('selLiderAfinidad').value
+  });
+  document.getElementById('inpLiderNombre').value = ''; document.getElementById('inpLiderCargo').value = '';
+  document.getElementById('inpLiderTelefono').value = ''; document.getElementById('selLiderAfinidad').value = '';
+  renderLideres();
+});
+
+document.getElementById('btnAgregarEvidenciaDiag').addEventListener('click', () => {
+  if (evidenciaDiag.length >= 3) { alert('Máximo 3 evidencias.'); return; }
+  document.getElementById('inpEvidenciaDiag').click();
+});
+document.getElementById('inpEvidenciaDiag').addEventListener('change', (e) => {
+  const archivo = e.target.files[0];
+  if (archivo) { evidenciaDiag.push({ blob: archivo, nombre: archivo.name || 'evidencia.jpg' }); renderMiniaturasEvidencia('miniaturasEvidenciaDiag', evidenciaDiag); }
+  e.target.value = '';
+});
+
+document.getElementById('btnGuardarDiagnostico').addEventListener('click', async () => {
+  const municipio = document.getElementById('selMunicipioDiag').value;
+  const colonia = document.getElementById('selColoniaDiag').value;
+  const poblacionTotal = document.getElementById('inpPoblacionTotal').value;
+  const problematicas = document.getElementById('inpProblematicas').value.trim();
+  const aviso = document.getElementById('avisoDiagnostico');
+  aviso.classList.add('oculto');
+
+  if (!municipio || !colonia) { aviso.textContent = 'Selecciona municipio y colonia.'; aviso.classList.remove('oculto'); return; }
+  if (!poblacionTotal) { aviso.textContent = 'Captura la población total estimada.'; aviso.classList.remove('oculto'); return; }
+  if (!problematicas) { aviso.textContent = 'Describe las principales problemáticas.'; aviso.classList.remove('oculto'); return; }
+
+  const servicios = { ...serviciosDiag };
+  const otroServicio = document.getElementById('inpOtroServicio').value.trim();
+  if (otroServicio) servicios.otro = otroServicio;
+
+  const programas = Array.from(programasSelDiag).map(p => ({ nombre: p, nivel: 'Estatal' }));
+  const otroPrograma = document.getElementById('inpOtroPrograma').value.trim();
+  if (otroPrograma) programas.push({ nombre: otroPrograma, nivel: document.getElementById('selNivelOtroPrograma').value });
+
+  const registro = {
+    uuid: generarUuid(), fecha: new Date().toISOString().slice(0, 10),
+    municipio, colonia,
+    poblacionTotal: parseInt(poblacionTotal) || 0, numHogares: parseInt(document.getElementById('inpNumHogares').value) || 0,
+    servicios, programas, lideres: lideresDiag,
+    organizacionesSociales: document.getElementById('inpOrganizaciones').value.trim(),
+    problematicas, conflictosActivos: conflictosActivosDiag,
+    observaciones: document.getElementById('inpObservacionesDiag').value.trim(),
+    evidencia: evidenciaDiag,
+    sincronizado: false, intentos: 0, creadoEn: new Date().toISOString()
+  };
+  CONTADORES_DIAG.forEach(c => { registro[c.clave] = parseInt(document.getElementById('cd_' + c.clave).value) || 0; });
+
+  const boton = document.getElementById('btnGuardarDiagnostico');
+  boton.disabled = true; boton.textContent = 'Guardando…';
+  await guardarEnAlmacen('registros_diagnostico', registro);
+
+  if (hayConexion()) {
+    const servidor = await leerConfig('servidor');
+    const resultado = await sincronizarDiagnosticoInmediata(registro, servidor.token);
+    if (resultado.ok) alert('✅ Diagnóstico generado. Folio: ' + resultado.folio);
+    else alert('✅ Guardado localmente. Pendiente de enviar (' + (resultado.mensaje || 'sin conexión con el servidor') + ').');
+  } else {
+    alert('✅ Diagnóstico guardado. Se enviará cuando haya conexión.');
+  }
+  boton.disabled = false; boton.textContent = '📤 Guardar y generar';
+  mostrarPantalla('pantallaHome');
+});
+
+let modoCapturaActividad = 'individual';
+
+document.getElementById('btnMenuActividad').addEventListener('click', async () => {
+  await prepararPantallaActividad();
+  mostrarPantalla('pantallaActividad');
+});
+document.getElementById('btnRegresarActividad').addEventListener('click', () => mostrarPantalla('pantallaHome'));
+
+async function prepararPantallaActividad() {
+  // Catálogos
+  const tipos = await obtenerCatalogoPorTipo('tipo_accion');
+  document.getElementById('selTipoActividad').innerHTML = '<option value="">Seleccionar...</option>' + tipos.map(t => `<option value="${t}">${t}</option>`).join('');
+  const programas = await obtenerCatalogoPorTipo('programa');
+  document.getElementById('selProgramasActividad').innerHTML = programas.map(p => `<option value="${p}">${p}</option>`).join('');
+  const servidores = await obtenerCatalogoPorTipo('servidor');
+  document.getElementById('selParticipantes').innerHTML = servidores.map(s => `<option value="${s.id}">${s.nombre}</option>`).join('');
+  const municipios = await obtenerCatalogoPorTipo('municipio');
+  document.getElementById('selMunicipioActividad').innerHTML = '<option value="">Seleccionar...</option>' + municipios.map(m => `<option value="${m}">${m}</option>`).join('');
+
+  // Detalle de personas
+  document.getElementById('detalleGrupos').innerHTML = CAMPOS_PERSONAS.map(c => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0ebe0;">
+      <span style="font-size:13px;">${c.etiqueta}</span>
+      <input type="number" id="det_${c.clave}" style="width:60px;padding:6px;border:1px solid #ddd;border-radius:8px;text-align:center;">
+    </div>`).join('');
+
+  // Limpiar formulario
+  document.getElementById('inpDescripcionActividad').value = '';
+  document.getElementById('inpPTotal').value = '';
+  document.getElementById('inpPMujeres').value = '';
+  document.getElementById('inpPHombres').value = '';
+  evidenciaActividad = [];
+  renderMiniaturasEvidencia('miniaturasEvidenciaActividad', evidenciaActividad);
+  modoCapturaActividad = 'individual';
+  document.getElementById('btnModoIndividual').classList.add('activo');
+  document.getElementById('bloqueParticipantes').classList.add('oculto');
+  document.getElementById('avisoActividad').classList.add('oculto');
+
+  // GPS
+  document.getElementById('avisoGpsActividad').textContent = '📍 Obteniendo ubicación…';
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        gpsActual = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        document.getElementById('avisoGpsActividad').textContent = `📍 GPS: ${gpsActual.lat.toFixed(4)}, ${gpsActual.lng.toFixed(4)}`;
+      },
+      () => { document.getElementById('avisoGpsActividad').textContent = '📍 No se pudo obtener ubicación (revisa permisos).'; }
+    );
+  }
+}
+
+document.getElementById('selMunicipioActividad').addEventListener('change', async (e) => {
+  const colonias = await obtenerCatalogoPorTipo('colonia', e.target.value);
+  const sel = document.getElementById('selColoniaActividad');
+  sel.innerHTML = colonias.length
+    ? '<option value="">Seleccionar...</option>' + colonias.map(c => `<option value="${c}">${c}</option>`).join('')
+    : '<option value="">Sin colonias registradas</option>';
+});
+
+document.getElementById('btnModoIndividual').addEventListener('click', () => {
+  modoCapturaActividad = 'individual';
+  document.getElementById('btnModoIndividual').classList.add('activo');
+  document.getElementById('btnModoIndividual').style.background = '#591620'; document.getElementById('btnModoIndividual').style.color = '#fff';
+  document.getElementById('btnModoGrupal').style.background = '#fff'; document.getElementById('btnModoGrupal').style.color = '#591620';
+  document.getElementById('bloqueParticipantes').classList.add('oculto');
+});
+document.getElementById('btnModoGrupal').addEventListener('click', () => {
+  modoCapturaActividad = 'grupal';
+  document.getElementById('btnModoGrupal').style.background = '#591620'; document.getElementById('btnModoGrupal').style.color = '#fff';
+  document.getElementById('btnModoIndividual').style.background = '#fff'; document.getElementById('btnModoIndividual').style.color = '#591620';
+  document.getElementById('bloqueParticipantes').classList.remove('oculto');
+});
+
+// ── Evidencia (compartida por las tres pantallas que la usan) ──
+function renderMiniaturasEvidencia(idContenedor, lista) {
+  const contenedor = document.getElementById(idContenedor);
+  contenedor.innerHTML = lista.map((item, i) => `
+    <div style="position:relative;width:70px;height:70px;">
+      <img src="${URL.createObjectURL(item.blob)}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">
+      <span data-idx="${i}" data-contenedor="${idContenedor}" class="btnQuitarEvidencia" style="position:absolute;top:-6px;right:-6px;background:rgba(0,0,0,0.7);color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;cursor:pointer;">✕</span>
+    </div>`).join('');
+  contenedor.querySelectorAll('.btnQuitarEvidencia').forEach(el => {
+    el.addEventListener('click', () => {
+      const idx = Number(el.getAttribute('data-idx'));
+      if (idContenedor === 'miniaturasEvidenciaActividad') { evidenciaActividad.splice(idx, 1); renderMiniaturasEvidencia(idContenedor, evidenciaActividad); }
+    });
+  });
+}
+
+document.getElementById('btnAgregarEvidenciaActividad').addEventListener('click', () => {
+  if (evidenciaActividad.length >= 3) { alert('Máximo 3 evidencias.'); return; }
+  document.getElementById('inpEvidenciaActividad').click();
+});
+document.getElementById('inpEvidenciaActividad').addEventListener('change', (e) => {
+  const archivo = e.target.files[0];
+  if (archivo) {
+    evidenciaActividad.push({ blob: archivo, nombre: archivo.name || 'evidencia.jpg' });
+    renderMiniaturasEvidencia('miniaturasEvidenciaActividad', evidenciaActividad);
+  }
+  e.target.value = '';
+});
+
+document.getElementById('btnGuardarActividad').addEventListener('click', async () => {
+  const tipoActividad = document.getElementById('selTipoActividad').value;
+  const descripcion = document.getElementById('inpDescripcionActividad').value.trim();
+  const municipio = document.getElementById('selMunicipioActividad').value;
+  const colonia = document.getElementById('selColoniaActividad').value;
+  const aviso = document.getElementById('avisoActividad');
+  aviso.classList.add('oculto');
+
+  if (!tipoActividad) { aviso.textContent = 'Selecciona el tipo de actividad.'; aviso.classList.remove('oculto'); return; }
+  if (!descripcion) { aviso.textContent = 'Describe brevemente la actividad.'; aviso.classList.remove('oculto'); return; }
+  if (!municipio || !colonia) { aviso.textContent = 'Selecciona municipio y colonia.'; aviso.classList.remove('oculto'); return; }
+
+  const programas = Array.from(document.getElementById('selProgramasActividad').selectedOptions).map(o => o.value);
+  const otrosParticipantes = modoCapturaActividad === 'grupal'
+    ? Array.from(document.getElementById('selParticipantes').selectedOptions).map(o => o.value)
+    : [];
+
+  const personasAtendidas = {
+    total: parseInt(document.getElementById('inpPTotal').value) || 0,
+    mujeres: parseInt(document.getElementById('inpPMujeres').value) || 0,
+    hombres: parseInt(document.getElementById('inpPHombres').value) || 0,
+  };
+  CAMPOS_PERSONAS.forEach(c => { personasAtendidas[c.clave] = parseInt(document.getElementById('det_' + c.clave).value) || 0; });
+
+  const boton = document.getElementById('btnGuardarActividad');
+  boton.disabled = true; boton.textContent = 'Guardando…';
+
+  const registro = {
+    uuid: generarUuid(),
+    fecha: new Date().toISOString().slice(0, 10),
+    tipoActividad, programas, descripcion, municipio, colonia,
+    personasAtendidas, otrosParticipantes,
+    gpsLat: gpsActual ? gpsActual.lat : null, gpsLng: gpsActual ? gpsActual.lng : null,
+    evidencia: evidenciaActividad,
+    sincronizado: false, intentos: 0, creadoEn: new Date().toISOString()
+  };
+  await guardarEnAlmacen('registros_actividad', registro);
+
+  if (hayConexion()) {
+    const servidor = await leerConfig('servidor');
+    const resultado = await sincronizarActividadInmediata(registro, servidor.token);
+    if (resultado.ok) {
+      alert('✅ Actividad generada. Folio: ' + resultado.folio);
+    } else {
+      alert('✅ Guardada localmente. Pendiente de enviar (' + (resultado.mensaje || 'sin conexión con el servidor') + ').');
+    }
+  } else {
+    alert('✅ Actividad guardada. Se enviará cuando haya conexión.');
+  }
+
+  boton.disabled = false; boton.textContent = '📤 Guardar y generar';
+  mostrarPantalla('pantallaHome');
+});
+
+// ── Al cargar: si ya había sesión guardada, entra directo ──
+(async function inicio() {
+  try {
+    const servidor = await leerConfig('servidor');
+    if (servidor && servidor.token) {
+      iniciarSincronizacionAutomatica();
+      mostrarHome(servidor.nombre, servidor.cargo);
+    }
+  } catch (e) {
+    console.log('Error al leer la sesión guardada:', e.message);
+  }
+})();
+
+// ═══════════════════════════════════════════════════
+// Pantalla: Tarjeta Informativa
+// ═══════════════════════════════════════════════════
+let evidenciaTarjeta = [];
+
+document.getElementById('btnMenuTarjeta').addEventListener('click', async () => {
+  await prepararPantallaTarjeta();
+  mostrarPantalla('pantallaTarjeta');
+});
+document.getElementById('btnRegresarTarjeta').addEventListener('click', () => mostrarPantalla('pantallaHome'));
+
+async function prepararPantallaTarjeta() {
+  const municipios = await obtenerCatalogoPorTipo('municipio');
+  document.getElementById('selMunicipioTarjeta').innerHTML = '<option value="">Seleccionar...</option>' + municipios.map(m => `<option value="${m}">${m}</option>`).join('');
+  ['inpAsuntoTarjeta', 'inpHoraTarjeta', 'inpObjetivoTarjeta', 'inpDomicilioTarjeta', 'inpDesarrolloTarjeta', 'inpResultadoTarjeta'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('inpFechaTarjeta').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('selColoniaTarjeta').innerHTML = '<option value="">Selecciona primero el municipio</option>';
+  evidenciaTarjeta = [];
+  renderMiniaturasEvidencia('miniaturasEvidenciaTarjeta', evidenciaTarjeta);
+  document.getElementById('avisoTarjeta').classList.add('oculto');
+}
+
+document.getElementById('selMunicipioTarjeta').addEventListener('change', async (e) => {
+  const colonias = await obtenerCatalogoPorTipo('colonia', e.target.value);
+  const sel = document.getElementById('selColoniaTarjeta');
+  sel.innerHTML = colonias.length
+    ? '<option value="">Seleccionar...</option>' + colonias.map(c => `<option value="${c}">${c}</option>`).join('')
+    : '<option value="">Sin colonias registradas</option>';
+});
+
+document.getElementById('btnAgregarEvidenciaTarjeta').addEventListener('click', () => {
+  if (evidenciaTarjeta.length >= 5) { alert('Máximo 5 evidencias.'); return; }
+  document.getElementById('inpEvidenciaTarjeta').click();
+});
+document.getElementById('inpEvidenciaTarjeta').addEventListener('change', (e) => {
+  const archivo = e.target.files[0];
+  if (archivo) { evidenciaTarjeta.push({ blob: archivo, nombre: archivo.name || 'evidencia.jpg' }); renderMiniaturasEvidencia('miniaturasEvidenciaTarjeta', evidenciaTarjeta); }
+  e.target.value = '';
+});
+
+document.getElementById('btnGuardarTarjeta').addEventListener('click', async () => {
+  const asunto = document.getElementById('inpAsuntoTarjeta').value.trim();
+  const fecha = document.getElementById('inpFechaTarjeta').value;
+  const objetivo = document.getElementById('inpObjetivoTarjeta').value.trim();
+  const municipio = document.getElementById('selMunicipioTarjeta').value;
+  const colonia = document.getElementById('selColoniaTarjeta').value;
+  const desarrolloHechos = document.getElementById('inpDesarrolloTarjeta').value.trim();
+  const resultado = document.getElementById('inpResultadoTarjeta').value.trim();
+  const aviso = document.getElementById('avisoTarjeta');
+  aviso.classList.add('oculto');
+
+  if (!asunto) { aviso.textContent = 'Falta el asunto.'; aviso.classList.remove('oculto'); return; }
+  if (!fecha) { aviso.textContent = 'Falta la fecha del hecho.'; aviso.classList.remove('oculto'); return; }
+  if (!objetivo) { aviso.textContent = 'Falta el objetivo / finalidad.'; aviso.classList.remove('oculto'); return; }
+  if (!municipio) { aviso.textContent = 'Falta el municipio.'; aviso.classList.remove('oculto'); return; }
+  if (!colonia) { aviso.textContent = 'Falta la colonia / localidad.'; aviso.classList.remove('oculto'); return; }
+  if (!desarrolloHechos) { aviso.textContent = 'Falta el desarrollo de los hechos.'; aviso.classList.remove('oculto'); return; }
+  if (!resultado) { aviso.textContent = 'Falta el resultado.'; aviso.classList.remove('oculto'); return; }
+
+  const registro = {
+    uuid: generarUuid(), asunto, fecha, hora: document.getElementById('inpHoraTarjeta').value,
+    objetivo, municipio, colonia, domicilio: document.getElementById('inpDomicilioTarjeta').value.trim(),
+    desarrolloHechos, resultado, evidencia: evidenciaTarjeta,
+    sincronizado: false, intentos: 0, creadoEn: new Date().toISOString()
+  };
+
+  const boton = document.getElementById('btnGuardarTarjeta');
+  boton.disabled = true; boton.textContent = 'Generando…';
+  await guardarEnAlmacen('tarjetas_informativas', registro);
+
+  if (hayConexion()) {
+    const servidor = await leerConfig('servidor');
+    const res = await sincronizarTarjetaInmediata(registro, servidor.token);
+    if (res.ok) alert('✅ Tarjeta generada. Folio: ' + res.folio);
+    else alert('✅ Guardada localmente. Pendiente de enviar (' + (res.mensaje || 'sin conexión con el servidor') + ').');
+  } else {
+    alert('✅ Tarjeta guardada. Se generará con folio real cuando haya conexión.');
+  }
+  boton.disabled = false; boton.textContent = '📤 Generar y guardar';
+  mostrarPantalla('pantallaHome');
+});
+
+// ═══════════════════════════════════════════════════
+// Pantalla: Mis Registros (Historial)
+// ═══════════════════════════════════════════════════
+document.getElementById('btnMenuHistorial').addEventListener('click', async () => {
+  await cargarHistorial('actividad');
+  mostrarPantalla('pantallaHistorial');
+});
+document.getElementById('btnRegresarHistorial').addEventListener('click', () => mostrarPantalla('pantallaHome'));
+
+document.querySelectorAll('.pestana-hist').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    document.querySelectorAll('.pestana-hist').forEach(b => { b.style.background = '#f4ede0'; b.style.color = '#591620'; b.classList.remove('activa'); });
+    btn.style.background = '#591620'; btn.style.color = '#f4d35e'; btn.classList.add('activa');
+    await cargarHistorial(btn.getAttribute('data-tipo'));
+  });
+});
+
+const ALMACEN_POR_TIPO = { actividad: 'registros_actividad', diagnostico: 'registros_diagnostico', tarjeta: 'tarjetas_informativas' };
+
+async function cargarHistorial(tipo) {
+  const registros = (await obtenerTodoDeAlmacen(ALMACEN_POR_TIPO[tipo]))
+    .sort((a, b) => (b.creadoEn || '').localeCompare(a.creadoEn || ''));
+  const contenedor = document.getElementById('listaHistorial');
+
+  if (registros.length === 0) {
+    contenedor.innerHTML = '<div class="centro"><p style="font-size:16px;">📋</p><p>Sin registros todavía.</p></div>';
+    return;
+  }
+
+  contenedor.innerHTML = registros.map(r => {
+    const estadoTexto = r.sincronizado ? '✅ Sincronizado' + (r.folio ? ' — Folio ' + r.folio : '') : ((r.intentos || 0) >= 5 ? '❌ Error al enviar' : '⏳ Pendiente de envío');
+    const estadoColor = r.sincronizado ? '#2e7d32' : ((r.intentos || 0) >= 5 ? '#a92727' : '#e65100');
+    const titulo = tipo === 'actividad' ? r.tipoActividad : (tipo === 'diagnostico' ? r.colonia : r.asunto);
+    const lugar = tipo === 'tarjeta' ? `${r.municipio} — ${r.colonia}` : `${r.municipio} — ${r.colonia}`;
+    const errorLinea = (r.intentos || 0) >= 5 && r.errorMsg ? `<p style="font-size:11px;color:#a92727;font-style:italic;margin-top:4px;">${r.errorMsg}</p>` : '';
+    return `<div style="background:#fff;border-radius:12px;padding:14px;margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;"><span style="font-size:12px;color:#888;">${r.fecha}</span></div>
+      <p style="font-weight:700;color:#591620;margin:4px 0;">${titulo || '(sin título)'}</p>
+      <p style="font-size:13px;color:#888;">📍 ${lugar}</p>
+      <p style="font-size:11px;font-weight:600;color:${estadoColor};margin-top:6px;">${estadoTexto}</p>
+      ${errorLinea}
+    </div>`;
+  }).join('');
+}
+
+document.getElementById('btnSincronizarAhora').addEventListener('click', async () => {
+  if (!hayConexion()) { alert('Sin conexión — no hay internet disponible en este momento.'); return; }
+  const el = document.getElementById('btnSincronizarAhora');
+  el.textContent = 'Sincronizando…';
+  const resultado = await sincronizarTodoPendiente();
+  el.textContent = '🔄 Sincronizar ahora';
+  if (resultado.ok) {
+    const total = resultado.actividades + resultado.diagnosticos + resultado.tarjetas;
+    alert(total > 0 ? `✅ ${total} registro(s) enviado(s) correctamente.` : '✅ Todo está actualizado.');
+  } else if (resultado.razon === 'sin_sesion') {
+    alert('Sesión expirada — vuelve a iniciar sesión con internet.');
+  }
+});
+</script>
+</body>
+</html>
