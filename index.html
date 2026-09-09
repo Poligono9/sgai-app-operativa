@@ -54,6 +54,42 @@
   </div>
 </div>
 
+<div id="pantallaNip" class="pantalla oculto">
+  <div class="header">
+    <h1>SGAI</h1>
+    <p>Ingresa tu NIP</p>
+  </div>
+  <div class="contenido">
+    <div id="avisoErrorNip" class="aviso aviso-error oculto"></div>
+    <div class="campo">
+      <label>Tu NIP (4 dígitos)</label>
+      <input type="password" id="inpNipEntrada" inputmode="numeric" maxlength="4" style="font-size:28px;letter-spacing:16px;text-align:center;">
+    </div>
+    <button class="btn-primario" id="btnEntrarConNip">Entrar</button>
+    <p class="centro" id="btnOlvideNip" style="cursor:pointer;color:#591620;text-decoration:underline;margin-top:16px;font-size:13px;">Olvidé mi NIP — usar mi clave completa</p>
+  </div>
+</div>
+
+<div id="pantallaConfigurarNip" class="pantalla oculto">
+  <div class="header">
+    <h1>Configura tu NIP</h1>
+    <p>Un atajo de 4 dígitos, solo para este navegador</p>
+  </div>
+  <div class="contenido">
+    <div class="aviso" style="background:#fff3e0;color:#8a6d1a;">Tu clave actual tiene letras, números y símbolos — difícil de recordar todos los días. Con un NIP de 4 dígitos puedes entrar más rápido, solo en este navegador.</div>
+    <div id="avisoErrorConfigNip" class="aviso aviso-error oculto"></div>
+    <div id="pasoNip1">
+      <div class="campo"><label>Crea tu NIP (4 dígitos)</label><input type="password" id="inpNipNuevo" inputmode="numeric" maxlength="4" style="font-size:28px;letter-spacing:16px;text-align:center;"></div>
+      <button class="btn-primario" id="btnContinuarNip1">Continuar</button>
+    </div>
+    <div id="pasoNip2" class="oculto">
+      <div class="campo"><label>Confirma tu NIP</label><input type="password" id="inpNipConfirmar" inputmode="numeric" maxlength="4" style="font-size:28px;letter-spacing:16px;text-align:center;"></div>
+      <button class="btn-primario" id="btnGuardarNip">Guardar NIP</button>
+    </div>
+    <p class="centro" id="btnOmitirConfigNip" style="cursor:pointer;color:#591620;text-decoration:underline;margin-top:16px;font-size:13px;">Ahora no, seguir con mi clave normal</p>
+  </div>
+</div>
+
 <div id="pantallaHome" class="pantalla oculto">
   <div class="header">
     <h1 id="txtNombreServidor">SGAI</h1>
@@ -81,6 +117,7 @@
       <p>Ver historial de actividades</p>
     </div>
     <div class="centro" id="btnSincronizarAhora" style="cursor:pointer;color:#591620;font-weight:700;margin-bottom:16px;">🔄 Sincronizar ahora</div>
+    <div class="centro" id="btnGestionarNip" style="cursor:pointer;color:#591620;margin-bottom:16px;">🔢 <span id="txtBtnGestionarNip">Configurar NIP de acceso rápido</span></div>
     <div class="centro" id="cerrarSesionBtn" style="cursor:pointer;color:#a92727;">Cerrar sesión</div>
   </div>
 </div>
@@ -281,6 +318,10 @@
 
     <div id="avisoGpsXantolo" style="background:#fff3e0;border-radius:8px;padding:10px;font-size:12px;color:#8a6d1a;margin-bottom:16px;">📍 Obteniendo ubicación…</div>
 
+    <p style="font-weight:800;color:#591620;text-transform:uppercase;font-size:13px;border-bottom:1px solid #ddd;padding-bottom:6px;margin:16px 0 8px;">Documentos que presentó el beneficiario *</p>
+    <div id="checksDocumentosXantolo"></div>
+    <input type="text" id="inpDocOtroXantolo" placeholder="¿Qué otro documento presentó?" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;display:none;margin-top:8px;">
+
     <p style="font-weight:800;color:#591620;text-transform:uppercase;font-size:13px;border-bottom:1px solid #ddd;padding-bottom:6px;margin:16px 0 8px;">Evidencia del evento (foto del momento de la entrega) *</p>
     <div id="miniaturasEventoXantolo" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;"></div>
     <input type="file" id="inpEventoXantolo" accept="image/*" capture="environment" style="display:none;">
@@ -320,7 +361,7 @@
 // ⚠️ IMPORTANTE: esta debe ser la URL real de tu SGAI, la misma
 // que usas para entrar al panel administrativo, terminada en
 // "/exec" — sin nada después. Confírmala antes de publicar.
-const BASE_URL = 'https://script.google.com/macros/s/AKfycbxkwk9FXi9Flw5Kg-mvG2mZ_REGunN5OIpMMzf5OtVm3Usvtn89-JVlhtdF_w054GJy/exec';
+const BASE_URL = 'https://script.google.com/macros/s/AKfycbwUgToveZ8ckT6dgPHyslO4c6WlxNPy4-shy9R55iKcUXTswqtkijoTVNdJilFoXKxPXg/exec';
 
 // ═══════════════════════════════════════════════════
 // IndexedDB — equivalente web al SQLite de la app Android.
@@ -601,6 +642,7 @@ async function sincronizarXantoloInmediata(reg, token) {
         costales: reg.costales, kitsSueltos: reg.kitsSueltos,
         testigoNombre: reg.testigoNombre, testigoCargo: reg.testigoCargo,
         gpsLat: reg.gpsLat, gpsLng: reg.gpsLng,
+        documentosPresentados: reg.documentosPresentados, documentoOtroTexto: reg.documentoOtroTexto,
         declaracionAceptada: reg.declaracionAceptada,
         observaciones: reg.observaciones,
         evidenciaEvento, evidenciaLista
@@ -737,7 +779,15 @@ document.getElementById('btnIngresar').addEventListener('click', async () => {
       const resultadoCat = await descargarCatalogos(data.token);
       if (!resultadoCat.ok) console.log('No se pudieron descargar catálogos:', resultadoCat.mensaje);
       iniciarSincronizacionAutomatica();
-      mostrarHome(data.nombre, data.cargo);
+      // Después de un login completo, se ofrece configurar el NIP
+      // si todavía no existe uno en este navegador — igual que en
+      // la app de Android (acordado con Beto, 09/09/2026).
+      const servidorGuardado = await leerConfig('servidor');
+      if (servidorGuardado && !servidorGuardado.nipLocal) {
+        mostrarPantallaConfigurarNip(data.nombre, data.cargo);
+      } else {
+        mostrarHome(data.nombre, data.cargo);
+      }
     } else {
       avisoError.textContent = data.error || 'No se pudo iniciar sesión.';
       avisoError.classList.remove('oculto');
@@ -750,9 +800,12 @@ document.getElementById('btnIngresar').addEventListener('click', async () => {
   boton.textContent = 'Ingresar';
 });
 
-function mostrarHome(nombre, cargo) {
+async function mostrarHome(nombre, cargo) {
   document.getElementById('txtNombreServidor').textContent = nombre;
   document.getElementById('txtCargoServidor').textContent = cargo || '';
+  const servidor = await leerConfig('servidor');
+  document.getElementById('txtBtnGestionarNip').textContent =
+    (servidor && servidor.nipLocal) ? 'Desactivar NIP de acceso rápido' : 'Configurar NIP de acceso rápido';
   mostrarPantalla('pantallaHome');
 }
 
@@ -766,6 +819,93 @@ function iniciarSincronizacionAutomatica() {
 
 document.getElementById('cerrarSesionBtn').addEventListener('click', async () => {
   await guardarConfig('servidor', null);
+  mostrarPantalla('pantallaLogin');
+});
+
+// ═══════════════════════════════════════════════════
+// NIP local de 4 dígitos — mismo criterio que la app de Android:
+// nunca viaja a SGAI, solo destraba la sesión ya guardada en este
+// navegador específico.
+// ═══════════════════════════════════════════════════
+function mostrarPantallaConfigurarNip(nombre, cargo) {
+  document.getElementById('inpNipNuevo').value = '';
+  document.getElementById('inpNipConfirmar').value = '';
+  document.getElementById('pasoNip1').classList.remove('oculto');
+  document.getElementById('pasoNip2').classList.add('oculto');
+  document.getElementById('avisoErrorConfigNip').classList.add('oculto');
+  window._nipDestino = { nombre, cargo };
+  mostrarPantalla('pantallaConfigurarNip');
+}
+
+document.getElementById('btnContinuarNip1').addEventListener('click', () => {
+  const nipNuevo = document.getElementById('inpNipNuevo').value;
+  const aviso = document.getElementById('avisoErrorConfigNip');
+  if (nipNuevo.length !== 4) { aviso.textContent = 'El NIP debe tener exactamente 4 dígitos.'; aviso.classList.remove('oculto'); return; }
+  aviso.classList.add('oculto');
+  document.getElementById('pasoNip1').classList.add('oculto');
+  document.getElementById('pasoNip2').classList.remove('oculto');
+});
+
+document.getElementById('btnGuardarNip').addEventListener('click', async () => {
+  const nipNuevo = document.getElementById('inpNipNuevo').value;
+  const confirmacion = document.getElementById('inpNipConfirmar').value;
+  const aviso = document.getElementById('avisoErrorConfigNip');
+  if (confirmacion !== nipNuevo) {
+    aviso.textContent = 'El NIP no coincide con el que capturaste antes. Intenta de nuevo.';
+    aviso.classList.remove('oculto');
+    document.getElementById('inpNipNuevo').value = '';
+    document.getElementById('inpNipConfirmar').value = '';
+    document.getElementById('pasoNip1').classList.remove('oculto');
+    document.getElementById('pasoNip2').classList.add('oculto');
+    return;
+  }
+  const servidor = await leerConfig('servidor');
+  servidor.nipLocal = nipNuevo;
+  await guardarConfig('servidor', servidor);
+  alert('✅ NIP configurado. Ya puedes usar este NIP para entrar más rápido en este navegador.');
+  mostrarHome(window._nipDestino.nombre, window._nipDestino.cargo);
+});
+
+document.getElementById('btnOmitirConfigNip').addEventListener('click', () => {
+  mostrarHome(window._nipDestino.nombre, window._nipDestino.cargo);
+});
+
+document.getElementById('btnGestionarNip').addEventListener('click', async () => {
+  const servidor = await leerConfig('servidor');
+  if (servidor && servidor.nipLocal) {
+    if (confirm('¿Confirmas que quieres desactivar el NIP de acceso rápido en este navegador? La próxima vez tendrás que entrar con tu clave completa.')) {
+      servidor.nipLocal = null;
+      await guardarConfig('servidor', servidor);
+      document.getElementById('txtBtnGestionarNip').textContent = 'Configurar NIP de acceso rápido';
+    }
+  } else {
+    mostrarPantallaConfigurarNip(servidor.nombre, servidor.cargo);
+  }
+});
+
+// ── Pantalla de entrada rápida con NIP (al reabrir la app) ──
+document.getElementById('btnEntrarConNip').addEventListener('click', async () => {
+  const nipIngresado = document.getElementById('inpNipEntrada').value;
+  const aviso = document.getElementById('avisoErrorNip');
+  aviso.classList.add('oculto');
+  const servidor = await leerConfig('servidor');
+  if (!servidor || !servidor.nipLocal) {
+    aviso.textContent = 'No hay un NIP configurado en este navegador.';
+    aviso.classList.remove('oculto');
+    return;
+  }
+  if (nipIngresado !== servidor.nipLocal) {
+    aviso.textContent = 'NIP incorrecto.';
+    aviso.classList.remove('oculto');
+    document.getElementById('inpNipEntrada').value = '';
+    return;
+  }
+  iniciarSincronizacionAutomatica();
+  mostrarHome(servidor.nombre, servidor.cargo);
+});
+
+document.getElementById('btnOlvideNip').addEventListener('click', () => {
+  document.getElementById('inpNipEntrada').value = '';
   mostrarPantalla('pantallaLogin');
 });
 
@@ -1148,8 +1288,16 @@ document.getElementById('btnGuardarActividad').addEventListener('click', async (
   try {
     const servidor = await leerConfig('servidor');
     if (servidor && servidor.token) {
-      iniciarSincronizacionAutomatica();
-      mostrarHome(servidor.nombre, servidor.cargo);
+      if (servidor.nipLocal) {
+        // Ya hay sesión Y NIP configurado — se pide el NIP antes de
+        // entrar, en vez de pasar directo (mismo criterio que la app
+        // de Android: siempre se pide algo al abrir).
+        document.getElementById('inpNipEntrada').value = '';
+        mostrarPantalla('pantallaNip');
+      } else {
+        iniciarSincronizacionAutomatica();
+        mostrarHome(servidor.nombre, servidor.cargo);
+      }
     }
   } catch (e) {
     console.log('Error al leer la sesión guardada:', e.message);
@@ -1303,6 +1451,8 @@ document.getElementById('btnSincronizarAhora').addEventListener('click', async (
 let gpsXantolo = null;
 let evidenciaEventoXantolo = [];
 let evidenciaListaXantolo = [];
+let documentosPresentadosXantolo = [];
+const TIPOS_DOCUMENTO_XANTOLO = ['INE', 'CURP', 'Comprobante de Domicilio', 'Otro'];
 
 document.getElementById('btnMenuXantolo').addEventListener('click', () => {
   prepararPantallaXantolo();
@@ -1311,12 +1461,31 @@ document.getElementById('btnMenuXantolo').addEventListener('click', () => {
 document.getElementById('btnRegresarXantolo').addEventListener('click', () => mostrarPantalla('pantallaHome'));
 
 function prepararPantallaXantolo() {
-  ['inpColoniaXantolo', 'inpCostalesXantolo', 'inpSueltosXantolo', 'inpTestigoNombreXantolo', 'inpTestigoCargoXantolo', 'inpObsXantolo'].forEach(id => document.getElementById(id).value = '');
+  ['inpColoniaXantolo', 'inpCostalesXantolo', 'inpSueltosXantolo', 'inpTestigoNombreXantolo', 'inpTestigoCargoXantolo', 'inpObsXantolo', 'inpDocOtroXantolo'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('chkDeclaracionXantolo').checked = false;
   evidenciaEventoXantolo = [];
   evidenciaListaXantolo = [];
+  documentosPresentadosXantolo = [];
   renderMiniaturasEvidencia('miniaturasEventoXantolo', evidenciaEventoXantolo);
   renderMiniaturasEvidencia('miniaturasListaXantolo', evidenciaListaXantolo);
+  document.getElementById('inpDocOtroXantolo').style.display = 'none';
+  document.getElementById('checksDocumentosXantolo').innerHTML = TIPOS_DOCUMENTO_XANTOLO.map(doc => `
+    <div class="doc-item" data-doc="${doc}" style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f0ebe0;cursor:pointer;">
+      <span class="doc-check">☐</span><span style="font-size:14px;">${doc}</span>
+    </div>`).join('');
+  document.querySelectorAll('#checksDocumentosXantolo .doc-item').forEach(el => {
+    el.addEventListener('click', () => {
+      const doc = el.getAttribute('data-doc');
+      if (documentosPresentadosXantolo.includes(doc)) {
+        documentosPresentadosXantolo = documentosPresentadosXantolo.filter(d => d !== doc);
+        el.querySelector('.doc-check').textContent = '☐';
+      } else {
+        documentosPresentadosXantolo.push(doc);
+        el.querySelector('.doc-check').textContent = '☑';
+      }
+      document.getElementById('inpDocOtroXantolo').style.display = documentosPresentadosXantolo.includes('Otro') ? 'block' : 'none';
+    });
+  });
   document.getElementById('avisoXantolo').classList.add('oculto');
   document.getElementById('totalKitsXantolo').textContent = 'Total: 0 kits';
 
@@ -1395,6 +1564,8 @@ document.getElementById('btnGuardarXantolo').addEventListener('click', async () 
   if (!colonia) { aviso.textContent = 'Captura la colonia o comunidad.'; aviso.classList.remove('oculto'); return; }
   if (!costales && !kitsSueltos) { aviso.textContent = 'Captura la cantidad de kits entregados.'; aviso.classList.remove('oculto'); return; }
   if (!testigoNombre) { aviso.textContent = 'Falta el nombre del testigo o representante comunitario.'; aviso.classList.remove('oculto'); return; }
+  if (documentosPresentadosXantolo.length === 0) { aviso.textContent = 'Marca al menos un documento presentado por el beneficiario.'; aviso.classList.remove('oculto'); return; }
+  if (documentosPresentadosXantolo.includes('Otro') && !document.getElementById('inpDocOtroXantolo').value.trim()) { aviso.textContent = 'Especifica qué otro documento presentó.'; aviso.classList.remove('oculto'); return; }
   if (evidenciaEventoXantolo.length === 0) { aviso.textContent = 'Agrega al menos una foto del evento de entrega.'; aviso.classList.remove('oculto'); return; }
   if (evidenciaListaXantolo.length === 0) { aviso.textContent = 'Agrega la foto o documento de la lista de nombres firmada.'; aviso.classList.remove('oculto'); return; }
   if (!declaracion) { aviso.textContent = 'Debes aceptar la declaración de veracidad antes de guardar.'; aviso.classList.remove('oculto'); return; }
@@ -1405,6 +1576,8 @@ document.getElementById('btnGuardarXantolo').addEventListener('click', async () 
     kitsTotal: (parseInt(costales) || 0) * 20 + (parseInt(kitsSueltos) || 0),
     testigoNombre, testigoCargo: document.getElementById('inpTestigoCargoXantolo').value.trim(),
     gpsLat: gpsXantolo ? gpsXantolo.lat : null, gpsLng: gpsXantolo ? gpsXantolo.lng : null,
+    documentosPresentados: documentosPresentadosXantolo,
+    documentoOtroTexto: document.getElementById('inpDocOtroXantolo').value.trim(),
     evidenciaEvento: evidenciaEventoXantolo, evidenciaLista: evidenciaListaXantolo,
     declaracionAceptada: true, observaciones: document.getElementById('inpObsXantolo').value.trim(),
     sincronizado: false, intentos: 0, creadoEn: new Date().toISOString()
